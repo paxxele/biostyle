@@ -19,6 +19,13 @@ async function render(){
  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.url);b.textContent='Enlace copiado';}catch(e){prompt('Copiá este enlace:',b.dataset.url);}}));
  $('usersList').innerHTML=users.length?users.map(u=>`<div class="data-row"><span><b>${esc(u.full_name)}</b><br>${esc(u.id)}</span><strong>${u.points_balance} puntos</strong></div>`).join(''):'<p class="empty">Todavía no hay clientes.</p>';
  $('redemptionsList').innerHTML=redemptions.length?redemptions.map(r=>`<div class="data-row"><span><b>${esc(r.rewards?.name||'Premio')}</b><br>${esc((users||[]).find(u=>u.id===r.user_id)?.full_name||r.user_id)} · ${r.points_spent} puntos</span><small>${new Date(r.created_at).toLocaleDateString('es-AR')}</small></div>`).join(''):'<p class="empty">Todavía no hay canjes.</p>';
+ const {data:reviews,error:reviewsError}=await sb.rpc('admin_list_product_reviews');
+ if(reviewsError){$('reviewsList').innerHTML=`<p class="empty">No se pudieron cargar las valoraciones: ${esc(reviewsError.message)}</p>`;return;}
+ $('reviewsList').innerHTML=reviews.length?reviews.map(review=>{
+  const stars=Number(review.rating)>0?'★'.repeat(Number(review.rating)):'0 estrellas';
+  const comment=review.comment?`<p class="review-comment">${esc(review.comment)}</p>`:'<p class="review-comment muted">Sin comentario</p>';
+  return `<article class="review-row"><div class="review-heading"><strong>${esc(review.reviewer_name)}</strong><span class="review-stars">${stars} <small>${review.rating}/5</small></span></div>${comment}<small class="review-details">QR ${esc(review.qr_code)} · ${new Date(review.created_at).toLocaleString('es-AR')}</small></article>`;
+ }).join(''):'<p class="empty">Todavía no hay valoraciones.</p>';
 }
 $('printCodes').addEventListener('click',()=>window.print());
 sb.auth.getSession().then(async({data})=>{if(data.session)await verifyAdmin();});

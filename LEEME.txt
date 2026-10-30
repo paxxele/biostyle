@@ -16,6 +16,9 @@ CÓMO PROBAR
 6. Generá códigos QR para envases de 100 g o 200 g.
 7. Abrí el enlace de un QR generado (o escanealo si el sitio está publicado) e iniciá sesión con la cuenta creada. Los puntos se acreditan una sola vez.
 8. Probá canjear premios desde el panel del cliente.
+9. Para activar las valoraciones, ejecutá supabase-reviews.sql en Supabase > SQL Editor. Al escanear un QR válido aparecerá primero la valoración de 0 a 5 estrellas y el comentario opcional; al enviarla se acreditan los puntos y se vuelve a BioStyle Club. Los QR usados no mostrarán el formulario.
+	Si aparece "Could not find the function public.validate_product_qr", ejecutá supabase-fix-validate-qr.sql en el mismo proyecto de Supabase que figura en supabase-config.js. Si aparece "Could not find the function public.submit_product_review", ejecutá el archivo completo supabase-reviews.sql. La consulta de verificación debe mostrar las dos funciones RPC.
+10. El panel de administración muestra las valoraciones registradas; para habilitarlo, ejecutá la versión actualizada completa de supabase-reviews.sql, que crea también el RPC administrativo protegido.
 
 PUNTOS FIJOS
 - Envase 100 g: 100 puntos.

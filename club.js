@@ -31,10 +31,15 @@ async function loadAccount(){
   if(!user){showAuth();return;}
   const {data:p,error}=await sb.from('profiles').select('id,full_name,points_balance').eq('id',user.id).single();
   if(error){msg('No pudimos cargar tu perfil: '+error.message);return;} profile=p;
-  $('auth').classList.add('hidden');$('dashboard').classList.remove('hidden');
+  $('auth').classList.add('hidden');
   $('customerName').textContent=(p.full_name||user.email||'').split(' ')[0];
+  if(pendingCode){
+    $('dashboard').classList.add('hidden');
+    await prepareRating(pendingCode);
+    return;
+  }
+  $('dashboard').classList.remove('hidden');
   await refreshDashboard();
-  if(pendingCode){await claimCode(pendingCode);}
 }
 async function refreshDashboard(){
   const [{data:tx,error:txErr},{data:rw,error:rwErr}] = await Promise.all([
@@ -50,12 +55,64 @@ async function refreshDashboard(){
   $('rewards').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>redeemReward(Number(b.dataset.reward))));
   $('history').innerHTML=(tx||[]).length?(tx||[]).map(t=>{const positive=t.points>0;return `<div class="history-row"><span>${esc(t.description)}<br><small>${new Date(t.created_at).toLocaleString('es-AR')}</small></span><strong class="${positive?'plus':'minus'}">${positive?'+':''}${t.points} pts</strong></div>`}).join(''):'<p class="hint">Todavía no tenés movimientos.</p>';
 }
-async function claimCode(code){
-  const notice=$('scanNotice');notice.classList.remove('hidden');notice.textContent='Validando tu código...';
-  const {data,error}=await sb.rpc('redeem_product_qr',{p_code:code});
-  if(error){notice.textContent=error.message.includes('ya fue utilizado')?'Este código ya fue utilizado y no puede volver a sumar puntos.':error.message;}
-  else{notice.textContent=`¡Listo! Sumaste ${data.points_added} puntos a tu cuenta BioStyle.`;await refreshDashboard();}
-  history.replaceState({},'',location.pathname);
+async function prepareRating(code){
+  const notice=$('scanNotice');notice.classList.remove('hidden');notice.textContent='Verificando tu QR...';
+  const {data,error}=await sb.rpc('validate_product_qr',{p_code:code});
+  if(error){
+    notice.textContent=/PGRST202|Could not find the function.*validate_product_qr/i.test(error.message||'')
+      ?'Falta configurar validate_product_qr en Supabase. Ejecutá supabase-fix-validate-qr.sql en el proyecto conectado; no depende del navegador.'
+      :error.message;
+    return;
+  }
+  if(!data?.available){notice.textContent='Este QR ya fue usado. No se puede volver a valorar.';return;}
+  showRatingForm(code);
+}
+function showRatingForm(code){
+  const notice=$('scanNotice');
+  let claimed=false;
+  const ratingMarkup=Array.from({length:6},(_,rating)=>`<button class="rating-choice" type="button" data-rating="${rating}" aria-label="${rating} estrellas" aria-pressed="false">${rating===0?'0':'★'.repeat(rating)}</button>`).join('');
+  notice.innerHTML=`<form id="reviewForm" class="review-form"><h3>¿Cómo fue tu experiencia?</h3><p>Dejanos una valoración de 0 a 5 estrellas. El comentario es opcional. Al responder, sumarás tus puntos y volverás a BioStyle Club.</p><div class="rating-choices" role="group" aria-label="Valoración en estrellas">${ratingMarkup}</div><textarea id="reviewComment" maxlength="1000" placeholder="Comentario opcional (hasta 1000 caracteres)"></textarea><button class="primary" id="submitReview" type="submit">Enviar valoración</button><p class="hint" id="reviewMsg" aria-live="polite"></p></form>`;
+  let selectedRating=null;
+  notice.querySelectorAll('.rating-choice').forEach(button=>button.addEventListener('click',()=>{
+    selectedRating=Number(button.dataset.rating);
+    notice.querySelectorAll('.rating-choice').forEach(choice=>{
+      const selected=Number(choice.dataset.rating)===selectedRating;
+      choice.setAttribute('aria-pressed',String(selected));
+      choice.classList.toggle('selected',selected);
+    });
+  }));
+  $('reviewForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(selectedRating===null){$('reviewMsg').textContent='Elegí una valoración de 0 a 5 estrellas.';return;}
+    const submit=$('submitReview');submit.disabled=true;$('reviewMsg').textContent='Guardando tu valoración...';
+    if(!claimed){
+      const {data:claimData,error:claimError}=await sb.rpc('redeem_product_qr',{p_code:code});
+      if(claimError){
+        const alreadyUsed=/ya (fue )?(utilizado|usado|canjeado)|already (used|redeemed)/i.test(claimError.message||'');
+        if(alreadyUsed){notice.textContent='Este QR ya fue usado. No se puede volver a valorar.';return;}
+        $('reviewMsg').textContent=claimError.message;
+        submit.disabled=false;
+        return;
+      }
+      claimed=true;
+      notice.dataset.pointsAdded=String(claimData?.points_added||0);
+    }
+    const {error}=await sb.rpc('submit_product_review',{
+      p_code:code,
+      p_rating:selectedRating,
+      p_comment:$('reviewComment').value.trim()
+    });
+    if(error){
+      $('reviewMsg').textContent=/ya (fue )?valorad|already (rated|reviewed)/i.test(error.message||'')
+        ?'Este QR ya tiene una valoración registrada.'
+        :error.message;
+      submit.disabled=false;
+      return;
+    }
+    const pointsAdded=Number(notice.dataset.pointsAdded||0);
+    $('reviewForm').innerHTML=`<h3>¡Gracias por compartir tu opinión!</h3><p>Tu valoración fue registrada y sumaste ${pointsAdded} puntos. Redirigiendo a BioStyle Club...</p>`;
+    window.setTimeout(()=>location.replace(location.pathname),1200);
+  });
 }
 async function redeemReward(id){
   const reward=rewards.find(r=>r.id===id);if(!reward)return;
