@@ -1,23 +1,68 @@
-const DB_KEY="biostyleClubDemo_v1";
-const rewardsList=[
- {id:"r10",name:"10% de descuento",detail:"Un descuento para tu próxima compra.",cost:100,icon:"✧"},
- {id:"r15",name:"15% de descuento",detail:"Un beneficio especial para tu próxima compra.",cost:200,icon:"✳"},
- {id:"gel100",name:"Gel BioStyle 100 g",detail:"Canjeá tus puntos por una unidad de 100 g.",cost:350,icon:"▣"},
- {id:"gel200",name:"Gel BioStyle 200 g",detail:"Llevate la presentación de 200 g.",cost:600,icon:"▣"}
+const { createClient } = window.supabase;
+const sb = createClient(window.BIOSTYLE_SUPABASE_URL, window.BIOSTYLE_SUPABASE_KEY);
+const rewardsFallback = [
+  {id:1,name:'10% de descuento',description:'Un descuento para tu próxima compra.',points_cost:100},
+  {id:2,name:'15% de descuento',description:'Un beneficio especial para tu próxima compra.',points_cost:200},
+  {id:3,name:'Gel BioStyle 100 g',description:'Canjeá tus puntos por una unidad de 100 g.',points_cost:350},
+  {id:4,name:'Gel BioStyle 200 g',description:'Llevate la presentación de 200 g.',points_cost:600}
 ];
-function load(){try{return JSON.parse(localStorage.getItem(DB_KEY))||{users:[],codes:[],redemptions:[]}}catch(e){return {users:[],codes:[],redemptions:[]}}}
-function save(db){localStorage.setItem(DB_KEY,JSON.stringify(db))}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-let current=null;
-const params=new URLSearchParams(location.search),pendingCode=params.get("envase");
-function showTab(which){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===which));document.getElementById("loginForm").classList.toggle("hidden",which!=="login");document.getElementById("registerForm").classList.toggle("hidden",which!=="register");document.getElementById("authMsg").textContent=""}
-document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
-function message(t){document.getElementById("authMsg").textContent=t}
-document.getElementById("registerForm").addEventListener("submit",e=>{e.preventDefault();let db=load(),name=document.getElementById("regName").value.trim(),email=document.getElementById("regEmail").value.trim().toLowerCase(),pass=document.getElementById("regPass").value;if(db.users.some(u=>u.email===email)){message("Ya existe una cuenta con ese correo.");return}let user={id:"U"+Date.now(),name,email,pass,points:0,history:[]};db.users.push(user);save(db);current=user.id;render()});
-document.getElementById("loginForm").addEventListener("submit",e=>{e.preventDefault();let db=load(),email=document.getElementById("loginEmail").value.trim().toLowerCase(),pass=document.getElementById("loginPass").value,user=db.users.find(u=>u.email===email&&u.pass===pass);if(!user){message("Correo o contraseña incorrectos.");return}current=user.id;render()});
-document.getElementById("logout").addEventListener("click",()=>{current=null;render()});
-function render(){let db=load(),user=db.users.find(u=>u.id===current);document.getElementById("auth").classList.toggle("hidden",!!user);document.getElementById("dashboard").classList.toggle("hidden",!user);if(!user)return;document.getElementById("customerName").textContent=user.name.split(" ")[0];document.getElementById("balance").textContent=user.points;let rewards=document.getElementById("rewards");rewards.innerHTML=rewardsList.map(r=>`<article class="reward"><span class="gift">${r.icon}</span><h3>${r.name}</h3><p>${r.detail}</p><strong>${r.cost} puntos</strong><button data-reward="${r.id}" ${user.points<r.cost?"disabled":""}>Canjear premio</button></article>`).join("");rewards.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>redeem(b.dataset.reward)));let hist=document.getElementById("history");hist.innerHTML=user.history.length?user.history.slice().reverse().map(h=>`<div class="history-row"><span>${esc(h.label)}<br><small>${new Date(h.date).toLocaleString("es-AR")}</small></span><strong class="${h.amount>0?"plus":"minus"}">${h.amount>0?"+":""}${h.amount} pts</strong></div>`).join(""):'<p class="hint">Todavía no tenés movimientos.</p>';if(pendingCode)claimCode(pendingCode)}
-function redeem(id){let db=load(),user=db.users.find(u=>u.id===current),r=rewardsList.find(x=>x.id===id);if(!user||!r||user.points<r.cost)return;user.points-=r.cost;user.history.push({label:"Canje: "+r.name,amount:-r.cost,date:new Date().toISOString()});db.redemptions.push({id:"C"+Date.now(),user:user.email,reward:r.name,date:new Date().toISOString()});save(db);alert("¡Canje realizado! En esta demo, el premio queda registrado en tu historial.");render()}
-function claimCode(codeId){let notice=document.getElementById("scanNotice");notice.classList.remove("hidden");let db=load(),code=db.codes.find(c=>c.id===codeId);if(!code){notice.textContent="Este código no existe en la demo. Escaneá un QR generado desde el panel administrativo.";history.replaceState({}, "", location.pathname);return}if(code.used){notice.textContent="Este código ya fue utilizado y no puede volver a sumar puntos.";history.replaceState({}, "", location.pathname);return}let user=db.users.find(u=>u.id===current);if(!user)return;code.used=true;code.usedBy=user.email;code.usedAt=new Date().toISOString();user.points+=code.points;user.history.push({label:"Envase BioStyle "+code.size+" g",amount:code.points,date:code.usedAt});save(db);notice.textContent=`¡Listo, ${user.name.split(" ")[0]}! Sumaste ${code.points} puntos por tu envase BioStyle de ${code.size} g.`;history.replaceState({}, "", location.pathname);document.getElementById("balance").textContent=user.points;renderWithoutClaim()}
-function renderWithoutClaim(){let db=load(),user=db.users.find(u=>u.id===current);if(!user)return;document.getElementById("balance").textContent=user.points;let hist=document.getElementById("history");hist.innerHTML=user.history.slice().reverse().map(h=>`<div class="history-row"><span>${esc(h.label)}<br><small>${new Date(h.date).toLocaleString("es-AR")}</small></span><strong class="${h.amount>0?"plus":"minus"}">${h.amount>0?"+":""}${h.amount} pts</strong></div>`).join("");document.querySelectorAll("#rewards button").forEach(b=>b.disabled=user.points<rewardsList.find(r=>r.id===b.dataset.reward).cost)}
-render();
+const params = new URLSearchParams(location.search);
+const pendingCode = params.get('envase');
+let currentUser = null;
+let profile = null;
+let rewards = [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function msg(text){ $('authMsg').textContent = text; }
+function showTab(which){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===which));$('loginForm').classList.toggle('hidden',which!=='login');$('registerForm').classList.toggle('hidden',which!=='register');msg('');}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+$('registerForm').addEventListener('submit', async e=>{
+  e.preventDefault(); msg('Creando tu cuenta...');
+  const full_name=$('regName').value.trim(), email=$('regEmail').value.trim(), password=$('regPass').value;
+  const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name}}});
+  if(error){msg(error.message);return;}
+  if(data.session){await loadAccount();} else {msg('Cuenta creada. Revisá tu correo para confirmar el registro y después iniciá sesión.');showTab('login');}
+});
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();msg('Ingresando...');const {error}=await sb.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPass').value});if(error){msg(error.message);return;}await loadAccount();});
+$('logout').addEventListener('click',async()=>{await sb.auth.signOut();currentUser=null;profile=null;showAuth();});
+function showAuth(){ $('auth').classList.remove('hidden');$('dashboard').classList.add('hidden'); }
+async function loadAccount(){
+  const {data:{user}}=await sb.auth.getUser(); currentUser=user;
+  if(!user){showAuth();return;}
+  const {data:p,error}=await sb.from('profiles').select('id,full_name,points_balance').eq('id',user.id).single();
+  if(error){msg('No pudimos cargar tu perfil: '+error.message);return;} profile=p;
+  $('auth').classList.add('hidden');$('dashboard').classList.remove('hidden');
+  $('customerName').textContent=(p.full_name||user.email||'').split(' ')[0];
+  await refreshDashboard();
+  if(pendingCode){await claimCode(pendingCode);}
+}
+async function refreshDashboard(){
+  const [{data:tx,error:txErr},{data:rw,error:rwErr}] = await Promise.all([
+    sb.from('point_transactions').select('points,movement_type,description,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}),
+    sb.from('rewards').select('id,name,description,points_cost').eq('active',true).order('points_cost')
+  ]);
+  if(txErr){$('history').textContent='No se pudo cargar el historial.';}
+  if(rwErr){$('rewards').textContent='No se pudieron cargar los premios.';return;}
+  rewards=rw||[];
+  const {data:p}=await sb.from('profiles').select('points_balance,full_name').eq('id',currentUser.id).single();
+  if(p){profile={...profile,...p};$('balance').textContent=p.points_balance;$('customerName').textContent=(p.full_name||'').split(' ')[0];}
+  $('rewards').innerHTML=rewards.map(r=>`<article class="reward"><span class="gift">✧</span><h3>${esc(r.name)}</h3><p>${esc(r.description)}</p><strong>${r.points_cost} puntos</strong><button data-reward="${r.id}" ${(profile?.points_balance||0)<r.points_cost?'disabled':''}>Canjear premio</button></article>`).join('');
+  $('rewards').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>redeemReward(Number(b.dataset.reward))));
+  $('history').innerHTML=(tx||[]).length?(tx||[]).map(t=>{const positive=t.points>0;return `<div class="history-row"><span>${esc(t.description)}<br><small>${new Date(t.created_at).toLocaleString('es-AR')}</small></span><strong class="${positive?'plus':'minus'}">${positive?'+':''}${t.points} pts</strong></div>`}).join(''):'<p class="hint">Todavía no tenés movimientos.</p>';
+}
+async function claimCode(code){
+  const notice=$('scanNotice');notice.classList.remove('hidden');notice.textContent='Validando tu código...';
+  const {data,error}=await sb.rpc('redeem_product_qr',{p_code:code});
+  if(error){notice.textContent=error.message.includes('ya fue utilizado')?'Este código ya fue utilizado y no puede volver a sumar puntos.':error.message;}
+  else{notice.textContent=`¡Listo! Sumaste ${data.points_added} puntos a tu cuenta BioStyle.`;await refreshDashboard();}
+  history.replaceState({},'',location.pathname);
+}
+async function redeemReward(id){
+  const reward=rewards.find(r=>r.id===id);if(!reward)return;
+  if(!confirm(`¿Querés canjear ${reward.name} por ${reward.points_cost} puntos?`))return;
+  const {data,error}=await sb.rpc('redeem_reward',{p_reward_id:id});
+  if(error){alert(error.message);return;}
+  alert('¡Canje registrado correctamente!');await refreshDashboard();
+}
+sb.auth.onAuthStateChange((_event,session)=>{if(!session){currentUser=null;profile=null;showAuth();}});
+(async()=>{const {data:{session}}=await sb.auth.getSession();if(session)await loadAccount();else showAuth();})();
