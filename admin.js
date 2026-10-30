@@ -6,7 +6,29 @@ $('adminForm').addEventListener('submit',async e=>{e.preventDefault();$('adminMs
 async function verifyAdmin(){const {data:{user}}=await sb.auth.getUser();if(!user){$('adminMsg').textContent='Iniciá sesión.';return;}const {data:p,error}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();if(error||!p?.is_admin){await sb.auth.signOut();$('adminMsg').textContent='Esta cuenta no tiene permisos de administrador.';return;}adminUser=user;$('adminLogin').classList.add('hidden');$('adminPanel').classList.remove('hidden');await render();}
 $('makeCodes').addEventListener('submit',async e=>{e.preventDefault();const size=Number($('size').value),quantity=Math.max(1,Math.min(50,Number($('quantity').value)||1));const {data,error}=await sb.rpc('admin_create_qr_codes',{p_size_g:size,p_quantity:quantity});if(error){alert(error.message);return;}alert(`Se generaron ${data.created} códigos QR.`);await render();});
 function codeUrl(code){return new URL('club.html?envase='+encodeURIComponent(code),location.href).href;}
+async function renderReviews(){
+ const list=$('reviewsList');if(!list)return;
+ list.innerHTML='<p class="empty">Cargando valoraciones...</p>';
+ let timeoutId;
+ try{
+  const result=await Promise.race([
+   sb.rpc('admin_list_product_reviews'),
+   new Promise((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('La consulta a Supabase tardó demasiado. Revisá la conexión y la función admin_list_product_reviews.')),15000);})
+  ]);
+  if(result.error)throw new Error(result.error.message);
+  const reviews=result.data||[];
+  list.innerHTML=reviews.length?reviews.map(review=>{
+   const stars=Number(review.rating)>0?'★'.repeat(Number(review.rating)):'0 estrellas';
+   const comment=review.comment?`<p class="review-comment">${esc(review.comment)}</p>`:'<p class="review-comment muted">Sin comentario</p>';
+   return `<article class="review-row"><div class="review-heading"><strong>${esc(review.reviewer_name)}</strong><span class="review-stars">${stars} <small>${review.rating}/5</small></span></div>${comment}<small class="review-details">QR ${esc(review.qr_code)} · ${new Date(review.created_at).toLocaleString('es-AR')}</small></article>`;
+  }).join(''):'<p class="empty">Todavía no hay valoraciones.</p>';
+ }catch(error){
+  list.innerHTML=`<p class="empty">No se pudieron cargar las valoraciones: ${esc(error.message||'Error desconocido.')}</p><button class="ghost" id="retryReviews">Reintentar</button>`;
+  $('retryReviews').addEventListener('click',renderReviews);
+ }finally{window.clearTimeout(timeoutId);}
+}
 async function render(){
+ renderReviews();
  const [{data:codes,error:cErr},{data:users,error:uErr},{data:redemptions,error:rErr}] = await Promise.all([
   sb.from('qr_codes').select('id,code,points,redeemed_by,redeemed_at,created_at,products(size_g)').order('created_at',{ascending:false}),
   sb.from('profiles').select('id,full_name,points_balance').order('created_at',{ascending:false}),
@@ -19,13 +41,6 @@ async function render(){
  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(b.dataset.url);b.textContent='Enlace copiado';}catch(e){prompt('Copiá este enlace:',b.dataset.url);}}));
  $('usersList').innerHTML=users.length?users.map(u=>`<div class="data-row"><span><b>${esc(u.full_name)}</b><br>${esc(u.id)}</span><strong>${u.points_balance} puntos</strong></div>`).join(''):'<p class="empty">Todavía no hay clientes.</p>';
  $('redemptionsList').innerHTML=redemptions.length?redemptions.map(r=>`<div class="data-row"><span><b>${esc(r.rewards?.name||'Premio')}</b><br>${esc((users||[]).find(u=>u.id===r.user_id)?.full_name||r.user_id)} · ${r.points_spent} puntos</span><small>${new Date(r.created_at).toLocaleDateString('es-AR')}</small></div>`).join(''):'<p class="empty">Todavía no hay canjes.</p>';
- const {data:reviews,error:reviewsError}=await sb.rpc('admin_list_product_reviews');
- if(reviewsError){$('reviewsList').innerHTML=`<p class="empty">No se pudieron cargar las valoraciones: ${esc(reviewsError.message)}</p>`;return;}
- $('reviewsList').innerHTML=reviews.length?reviews.map(review=>{
-  const stars=Number(review.rating)>0?'★'.repeat(Number(review.rating)):'0 estrellas';
-  const comment=review.comment?`<p class="review-comment">${esc(review.comment)}</p>`:'<p class="review-comment muted">Sin comentario</p>';
-  return `<article class="review-row"><div class="review-heading"><strong>${esc(review.reviewer_name)}</strong><span class="review-stars">${stars} <small>${review.rating}/5</small></span></div>${comment}<small class="review-details">QR ${esc(review.qr_code)} · ${new Date(review.created_at).toLocaleString('es-AR')}</small></article>`;
- }).join(''):'<p class="empty">Todavía no hay valoraciones.</p>';
 }
 $('printCodes').addEventListener('click',()=>window.print());
 sb.auth.getSession().then(async({data})=>{if(data.session)await verifyAdmin();});
