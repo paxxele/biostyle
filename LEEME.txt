@@ -19,6 +19,7 @@ CÓMO PROBAR
 9. Para activar las valoraciones, ejecutá supabase-reviews.sql en Supabase > SQL Editor. Al escanear un QR válido aparecerá primero la valoración de 0 a 5 estrellas y el comentario opcional; al enviarla se acreditan los puntos y se vuelve a BioStyle Club. Los QR usados no mostrarán el formulario.
 	Si aparece "Could not find the function public.validate_product_qr", ejecutá supabase-fix-validate-qr.sql en el mismo proyecto de Supabase que figura en supabase-config.js. Si aparece "Could not find the function public.submit_product_review", ejecutá el archivo completo supabase-reviews.sql. La consulta de verificación debe mostrar las dos funciones RPC.
 10. El panel de administración muestra las valoraciones registradas; para habilitarlo, ejecutá la versión actualizada completa de supabase-reviews.sql, que crea también el RPC administrativo protegido.
+11. El botón "Borrar todos los datos de esta demo" elimina QR, valoraciones, canjes y movimientos de puntos, y reinicia los saldos. Conserva las cuentas (incluida la de administración) y los catálogos de productos/premios. Requiere instalar la versión actualizada de supabase-reviews.sql y confirmar escribiendo BORRAR.
 
 PUNTOS FIJOS
 - Envase 100 g: 100 puntos.

@@ -143,6 +143,49 @@ $$;
 revoke all on function public.admin_list_product_reviews() from public, anon;
 grant execute on function public.admin_list_product_reviews() to authenticated;
 
+drop function if exists public.admin_reset_demo_data();
+create function public.admin_reset_demo_data()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_reviews_deleted bigint;
+  v_redemptions_deleted bigint;
+  v_qr_codes_deleted bigint;
+begin
+  if not exists (
+    select 1 from public.profiles as profile
+    where profile.id = auth.uid() and profile.is_admin = true
+  ) then
+    raise exception using errcode = 'P0001', message = 'No tenés permisos para borrar los datos de la demo.';
+  end if;
+
+  delete from public.product_reviews;
+  get diagnostics v_reviews_deleted = row_count;
+
+  delete from public.reward_redemptions;
+  get diagnostics v_redemptions_deleted = row_count;
+
+  delete from public.point_transactions;
+
+  delete from public.qr_codes;
+  get diagnostics v_qr_codes_deleted = row_count;
+
+  update public.profiles set points_balance = 0;
+
+  return pg_catalog.jsonb_build_object(
+    'reviews_deleted', v_reviews_deleted,
+    'redemptions_deleted', v_redemptions_deleted,
+    'qr_codes_deleted', v_qr_codes_deleted
+  );
+end;
+$$;
+
+revoke all on function public.admin_reset_demo_data() from public, anon;
+grant execute on function public.admin_reset_demo_data() to authenticated;
+
 notify pgrst, 'reload schema';
 
 -- Verificación: deben aparecer los RPC usados por el Club y por administración.
@@ -152,5 +195,5 @@ select n.nspname as schema_name,
 from pg_catalog.pg_proc as p
 join pg_catalog.pg_namespace as n on n.oid = p.pronamespace
 where n.nspname = 'public'
-  and p.proname in ('validate_product_qr', 'submit_product_review', 'admin_list_product_reviews')
+  and p.proname in ('validate_product_qr', 'submit_product_review', 'admin_list_product_reviews', 'admin_reset_demo_data')
 order by p.proname;

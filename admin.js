@@ -43,4 +43,18 @@ async function render(){
  $('redemptionsList').innerHTML=redemptions.length?redemptions.map(r=>`<div class="data-row"><span><b>${esc(r.rewards?.name||'Premio')}</b><br>${esc((users||[]).find(u=>u.id===r.user_id)?.full_name||r.user_id)} · ${r.points_spent} puntos</span><small>${new Date(r.created_at).toLocaleDateString('es-AR')}</small></div>`).join(''):'<p class="empty">Todavía no hay canjes.</p>';
 }
 $('printCodes').addEventListener('click',()=>window.print());
+$('resetDemo').addEventListener('click',async()=>{
+ if(!adminUser){alert('Iniciá sesión como administrador para continuar.');return;}
+ if(!confirm('Esto borrará todos los QR, puntos acreditados, canjes y valoraciones. Se conservarán las cuentas de usuario, los administradores y el catálogo de premios/productos. ¿Querés continuar?'))return;
+ const confirmation=prompt('Para confirmar el borrado definitivo, escribí BORRAR:');
+ if(confirmation!=='BORRAR')return;
+ const button=$('resetDemo');button.disabled=true;button.textContent='Borrando datos...';
+ try{
+  const {data,error}=await sb.rpc('admin_reset_demo_data');
+  if(error)throw new Error(error.message);
+  alert(`Datos borrados. Se eliminaron ${data.qr_codes_deleted} QR, ${data.reviews_deleted} valoraciones y ${data.redemptions_deleted} canjes. Los saldos de puntos se reiniciaron.`);
+  await render();
+ }catch(error){alert('No se pudieron borrar los datos: '+error.message);}
+ finally{button.disabled=false;button.textContent='Borrar todos los datos de esta demo';}
+});
 sb.auth.getSession().then(async({data})=>{if(data.session)await verifyAdmin();});
