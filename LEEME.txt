@@ -1,0 +1,27 @@
+BIOSTYLE CLUB - DEMO
+
+ARCHIVOS
+- index.html: página principal BioStyle (actualizada para entrar al Club).
+- club.html: registro, inicio de sesión, puntos, premios e historial.
+- admin.html: panel privado de demostración.
+- styles.css / script.js: archivos originales actualizados.
+- club.css / club.js / admin.css / admin.js: sistema BioStyle Club.
+
+CÓMO PROBAR
+1. Abrí index.html en Chrome, Edge o Brave.
+2. Entrá a BioStyle Club desde el bloque de puntos.
+3. Creá una cuenta de prueba.
+4. Para administrar, abrí admin.html.
+5. Contraseña de demostración: bio2026.
+6. Generá códigos QR para envases de 100 g o 200 g.
+7. Abrí el enlace de un QR generado (o escanealo si el sitio está publicado) e iniciá sesión con la cuenta creada. Los puntos se acreditan una sola vez.
+8. Probá canjear premios desde el panel del cliente.
+
+PUNTOS FIJOS
+- Envase 100 g: 100 puntos.
+- Envase 200 g: 200 puntos.
+
+IMPORTANTE
+Esta es una DEMO local. Los datos se guardan en localStorage del navegador y solo se comparten entre páginas abiertas en el mismo navegador/perfil. No hay servidor, base de datos online ni seguridad real. La contraseña administrativa es visible en el código y no debe usarse en producción.
+Los QR generados incluyen enlaces relativos del sitio. Para que puedan escanearse con celulares desde cualquier lugar, primero hay que publicar la carpeta completa en un hosting HTTPS y generar los QR después de conocer la dirección pública. El QR general de la página principal se genera dinámicamente.
+La generación de QR y las fuentes tipográficas usan bibliotecas/CDN externas, por lo que requieren conexión a internet.

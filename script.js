@@ -31,3 +31,13 @@ document.getElementById("contactForm").addEventListener("submit", event => {
     "Se abrirá tu aplicación de correo. Antes de publicar, reemplazá biostylebusiness9@gmail.com por el correo real de la marca.";
   window.location.href = `mailto:${destinationEmail}?subject=${subject}&body=${body}`;
 });
+
+// QR general hacia BioStyle Club.
+(function(){
+  const holder=document.getElementById("homeClubQr");
+  if(!holder) return;
+  const target=new URL("club.html",window.location.href).href;
+  const render=()=>{ if(window.QRCode){ holder.innerHTML=""; new QRCode(holder,{text:target,width:134,height:134,colorDark:"#19372b",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M}); } };
+  if(window.QRCode) render();
+  else { const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"; s.onload=render; document.head.appendChild(s); }
+})();
