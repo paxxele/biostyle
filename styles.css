@@ -34,3 +34,28 @@
 .fake-qr{display:grid;place-items:center;text-decoration:none;background:#fff!important;background-image:none!important;outline:1px solid #1c392a;overflow:hidden}
 .fake-qr canvas,.fake-qr img{display:block;max-width:100%;max-height:100%}
 .qr-placeholder{font:700 13px/1.5 "DM Sans",sans-serif;letter-spacing:.12em;text-align:center;color:#19372b}
+
+/* Pedido */
+.order-cta{display:flex;align-items:center;justify-content:space-between;gap:32px;background:#e8eadc}
+.order-cta h2{font-size:clamp(42px,4.5vw,60px);line-height:1.04;margin:18px 0}
+.order-cta>div>p:last-child{max-width:470px;color:#68736a;font-size:13px;line-height:1.8;margin:0}
+.order-cta>.button{flex-shrink:0}
+.order-page{max-width:780px;margin:0 auto;padding:72px 24px 90px}
+.order-intro{text-align:center;max-width:590px;margin:0 auto 34px}
+.order-intro .eyebrow{justify-content:center}
+.order-intro h1{font-size:clamp(48px,7vw,72px);margin:18px 0}
+.order-intro>p:last-child{color:#68736a;font-size:14px;line-height:1.8}
+.order-intro>p strong{color:var(--green)}
+.order-form{padding:30px;background:#fff;border:1px solid #e8e5db;box-shadow:0 12px 35px #172b2210}
+.order-fields{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.order-fields label{display:grid;gap:8px;color:var(--green);font-size:11px;font-weight:700}
+.order-fields input,.order-fields select{width:100%;min-height:46px;padding:12px;border:1px solid #dfe3d8;background:#fbfaf6;color:var(--ink);font:13px "DM Sans",sans-serif;outline:none}
+.order-fields input:focus,.order-fields select:focus{border-color:var(--green2)}
+.order-fields .field-wide{grid-column:1/-1}
+.payment-note{display:flex;align-items:center;gap:14px;margin:24px 0;padding:16px;background:#eef2e3;color:var(--green)}
+.payment-note>span{font-size:23px}
+.payment-note p{font-size:12px;line-height:1.6;margin:0}
+.order-submit{min-height:48px}
+.order-hint{color:#778075}
+.order-footer{justify-content:space-between}
+@media(max-width:600px){.order-cta{align-items:flex-start;flex-direction:column;padding:65px 7%;gap:24px}.order-cta .button{width:100%;justify-content:space-between}.order-page{padding:52px 18px 65px}.order-form{padding:21px 17px}.order-fields{grid-template-columns:1fr;gap:15px}.order-fields .field-wide{grid-column:auto}.order-footer{gap:16px}}
