@@ -58,4 +58,7 @@
 .order-submit{min-height:48px}
 .order-hint{color:#778075}
 .order-footer{justify-content:space-between}
+.order-success h2{font:500 36px "Playfair Display",serif;color:var(--green);margin:14px 0}
+.order-success>p:not(.eyebrow){color:#68736a;font-size:13px;line-height:1.8}
+.order-success .button{margin-top:8px}
 @media(max-width:600px){.order-cta{align-items:flex-start;flex-direction:column;padding:65px 7%;gap:24px}.order-cta .button{width:100%;justify-content:space-between}.order-page{padding:52px 18px 65px}.order-form{padding:21px 17px}.order-fields{grid-template-columns:1fr;gap:15px}.order-fields .field-wide{grid-column:auto}.order-footer{gap:16px}}

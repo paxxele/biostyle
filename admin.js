@@ -6,6 +6,14 @@ $('adminForm').addEventListener('submit',async e=>{e.preventDefault();$('adminMs
 async function verifyAdmin(){const {data:{user}}=await sb.auth.getUser();if(!user){$('adminMsg').textContent='Iniciá sesión.';return;}const {data:p,error}=await sb.from('profiles').select('is_admin').eq('id',user.id).single();if(error||!p?.is_admin){await sb.auth.signOut();$('adminMsg').textContent='Esta cuenta no tiene permisos de administrador.';return;}adminUser=user;$('adminLogin').classList.add('hidden');$('adminPanel').classList.remove('hidden');await render();}
 $('makeCodes').addEventListener('submit',async e=>{e.preventDefault();const size=Number($('size').value),quantity=Math.max(1,Math.min(50,Number($('quantity').value)||1));const {data,error}=await sb.rpc('admin_create_qr_codes',{p_size_g:size,p_quantity:quantity});if(error){alert(error.message);return;}alert(`Se generaron ${data.created} códigos QR.`);await render();});
 function codeUrl(code){return new URL('club.html?envase='+encodeURIComponent(code),location.href).href;}
+async function renderOrders(){
+ const list=$('ordersList');if(!list)return;
+ try{
+  const {data:orders,error}=await sb.rpc('admin_list_customer_orders');
+  if(error)throw new Error(error.message);
+  list.innerHTML=orders?.length?orders.map(order=>`<article class="order-row"><div class="review-heading"><strong>Pedido #${esc(order.order_number)} · ${esc(order.first_name)} ${esc(order.last_name)}</strong><span class="order-status">${esc(order.status)}</span></div><p class="review-comment"><b>${order.size_g} g × ${order.quantity}</b> · Pago contra entrega<br>${esc(order.address)} · ${esc(order.locality)}, ${esc(order.province)} · CP ${esc(order.postal_code)}</p><small class="review-details">${new Date(order.created_at).toLocaleString('es-AR')}</small></article>`).join(''):'<p class="empty">Todavía no hay pedidos.</p>';
+ }catch(error){list.innerHTML=`<p class="empty">No se pudieron cargar los pedidos: ${esc(error.message)}</p>`;}
+}
 async function renderReviews(){
  const list=$('reviewsList');if(!list)return;
  list.innerHTML='<p class="empty">Cargando valoraciones...</p>';
@@ -29,6 +37,7 @@ async function renderReviews(){
 }
 async function render(){
  renderReviews();
+ renderOrders();
  const [{data:codes,error:cErr},{data:users,error:uErr},{data:redemptions,error:rErr}] = await Promise.all([
   sb.from('qr_codes').select('id,code,points,redeemed_by,redeemed_at,created_at,products(size_g)').order('created_at',{ascending:false}),
   sb.from('profiles').select('id,full_name,points_balance').order('created_at',{ascending:false}),
@@ -52,7 +61,7 @@ $('resetDemo').addEventListener('click',async()=>{
  try{
   const {data,error}=await sb.rpc('admin_reset_demo_data');
   if(error)throw new Error(error.message);
-  alert(`Datos borrados. Se eliminaron ${data.qr_codes_deleted} QR, ${data.reviews_deleted} valoraciones y ${data.redemptions_deleted} canjes. Los saldos de puntos se reiniciaron.`);
+    alert(`Datos borrados. Se eliminaron ${data.qr_codes_deleted} QR, ${data.reviews_deleted} valoraciones, ${data.redemptions_deleted} canjes y ${data.orders_deleted} pedidos. Los saldos de puntos se reiniciaron.`);
   await render();
  }catch(error){alert('No se pudieron borrar los datos: '+error.message);}
  finally{button.disabled=false;button.textContent='Borrar todos los datos de esta demo';}

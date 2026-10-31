@@ -57,14 +57,16 @@
         </label>
       </div>
       <div class="payment-note"><span aria-hidden="true">✳</span><p><strong>Pagás cuando recibís el producto.</strong><br>No se solicita pago por adelantado.</p></div>
-      <button class="button button-dark order-submit" type="submit">Continuar por WhatsApp <span>↗</span></button>
-      <p class="form-hint order-hint" id="orderHint">Se abrirá WhatsApp con los datos del pedido para que puedas enviarlos. El pedido no queda confirmado hasta que lo envíes.</p>
+      <button class="button button-dark order-submit" id="submitOrder" type="submit">Confirmar pedido <span>↗</span></button>
+      <p class="form-hint order-hint" id="orderHint" aria-live="polite">El pedido se guardará en nuestra base de datos. Pagás cuando recibís el producto.</p>
     </form>
   </main>
   <footer class="site-footer order-footer">
     <a class="brand brand-footer" href="index.html#inicio"><span class="brand-mark">B<span>✳</span></span><span class="brand-name">bio<span>style</span><small>HAIR CARE</small></span></a>
     <small>© <span id="year"></span> BioStyle · Sitio demostrativo de un proyecto escolar.</small>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
   <script src="pedido.js"></script>
 </body>
 </html>
